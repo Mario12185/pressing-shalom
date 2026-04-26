@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 export default function AdminPage() {
-  const {  session, status } = useSession();
+  const { data: session, status } = useSession();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -44,11 +44,7 @@ export default function AdminPage() {
         <table className="w-full text-left">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3">ID</th>
-              <th className="p-3">Client</th>
-              <th className="p-3">Service</th>
-              <th className="p-3">Total</th>
-              <th className="p-3">Statut</th>
+              <th className="p-3">ID</th><th className="p-3">Client</th><th className="p-3">Service</th><th className="p-3">Total</th><th className="p-3">Statut</th>
             </tr>
           </thead>
           <tbody>
