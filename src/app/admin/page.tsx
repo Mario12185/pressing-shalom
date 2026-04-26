@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
+  const {  session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
 
