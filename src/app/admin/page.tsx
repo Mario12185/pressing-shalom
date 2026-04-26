@@ -34,7 +34,7 @@ export default function AdminPage() {
     fetchOrders();
   };
 
-  if (loading || status === "loading") return <div className="p-8 text-center text-gray-500">Chargement...</div>;
+  if (loading || status === "loading") return <div className="p-8 text-center">Chargement...</div>;
   if (status === "unauthenticated" || session?.user?.role !== "admin") return null;
 
   return (
