@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 export default function AdminPage() {
-  const {  session, status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
 
@@ -12,18 +12,18 @@ export default function AdminPage() {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       fetch("/api/admin/orders")
-        .then(r => r.json())
-        .then(d => setOrders(d.orders || []))
-        .catch(err => console.error(err));
+        .then((res) => res.json())
+        .then((data) => setOrders(data.orders || []))
+        .catch(() => {});
     }
   }, [status]);
 
-  if (status === "loading") return <div className="p-10 text-center">Chargement...</div>;
+  if (status === "loading") return <div className="p-8 text-center">Chargement...</div>;
   if (status !== "authenticated" || session?.user?.role !== "admin") return null;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">👨‍💼 Admin</h1>
+      <h1 className="text-2xl font-bold mb-4">👨‍💼 Admin - PRESSING SHALOM</h1>
       <div className="bg-white p-4 rounded shadow overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-100">
@@ -45,6 +45,7 @@ export default function AdminPage() {
             ))}
           </tbody>
         </table>
+        {orders.length === 0 && <p className="p-4 text-gray-500 text-center">Aucune commande</p>}
       </div>
     </div>
   );
