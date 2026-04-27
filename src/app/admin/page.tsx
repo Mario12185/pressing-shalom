@@ -4,37 +4,58 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 export default function AdminPage() {
-  const {  session, status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") {
-      fetch("/api/admin/orders").then(r => r.json()).then(d => setOrders(d.orders || [])).catch(() => {});
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
     }
-  }, [status]);
+    if (status === "authenticated") {
+      fetch("/api/admin/orders")
+        .then((res) => res.json())
+        .then((data) => setOrders(data.orders || []))
+        .catch(() => {});
+    }
+  }, [status, router]);
 
-  if (status === "loading") return <div className="p-8 text-center">Chargement...</div>;
-  if (status !== "authenticated" || session?.user?.role !== "admin") return null;
+  if (status === "loading") {
+    return <div className="p-8 text-center text-gray-500">Chargement...</div>;
+  }
+
+  if (status !== "authenticated" || (session as any)?.user?.role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">👨‍💼 Admin</h1>
+      <h1 className="text-2xl font-bold mb-4">👨‍💼 Admin - PRESSING SHALOM</h1>
       <div className="bg-white p-4 rounded shadow overflow-x-auto">
         <table className="w-full text-left">
-          <thead className="bg-gray-100"><tr><th className="p-2">ID</th><th className="p-2">Client</th><th className="p-2">Total</th><th className="p-2">Statut</th></tr></thead>
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2">ID</th>
+              <th className="p-2">Client</th>
+              <th className="p-2">Total</th>
+              <th className="p-2">Statut</th>
+            </tr>
+          </thead>
           <tbody>
-            {orders.map((o:any) => (
+            {orders.map((o: any) => (
               <tr key={o.id} className="border-t">
                 <td className="p-2">#{o.id.slice(-6)}</td>
-                <td className="p-2">{o.user?.name||"?"}</td>
+                <td className="p-2">{o.user?.name || "?"}</td>
                 <td className="p-2">{o.total} FCFA</td>
                 <td className="p-2 capitalize">{o.status}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        {orders.length === 0 && (
+          <p className="p-4 text-gray-500 text-center">Aucune commande</p>
+        )}
       </div>
     </div>
   );
