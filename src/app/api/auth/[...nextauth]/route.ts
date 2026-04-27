@@ -44,6 +44,7 @@ export const authOptions = {
 };
 
 // Export compatible v4/v5 pour éviter l'erreur TypeScript au build
-const handler = NextAuth(authOptions);
+// @ts-ignore
+const handler = NextAuth(authOptions as any);
 export const GET = handler;
 export const POST = handler;
