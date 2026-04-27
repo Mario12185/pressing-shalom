@@ -12,7 +12,8 @@ export const authOptions = {
         password: { label: "Mot de passe", type: "password" },
         phone: { label: "Téléphone", type: "tel" }
       },
-      async authorize(credentials: any, _req: any) {
+      // @ts-expect-error NextAuth v5 strict type check`n
+      authorize: async (credentials: any, _req: any) => {
         if (!credentials?.email || !credentials?.password) return null;
         
         const user = await prisma.user.findUnique({ where: { email: credentials.email } });
