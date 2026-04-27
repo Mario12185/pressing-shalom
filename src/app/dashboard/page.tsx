@@ -60,7 +60,7 @@ export default function DashboardPage() {
             <div className="p-4 bg-gray-50 rounded-xl"><p className="text-sm text-gray-500">Email</p><p className="font-medium text-gray-900 mt-1">{session?.user?.email}</p></div>
             <div className="p-4 bg-teal-50 rounded-xl border border-teal-100">
               <div className="flex items-center gap-2 text-teal-800"><Phone size={18} /><p className="text-sm font-medium">Téléphone</p></div>
-              <p className="font-semibold text-gray-900 mt-2 ml-6">{userPhone || session?.user?.phone || <span className="text-gray-400 italic">Non renseigné</span>}</p>
+              <p className="font-semibold text-gray-900 mt-2 ml-6">{userPhone || (session?.user as any)?.phone || <span className="text-gray-400 italic">Non renseigné</span>}</p>
             </div>
           </div>
         </div>
