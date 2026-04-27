@@ -21,7 +21,7 @@ const ITEMS = [
 ];
 
 export default function CommandePage() {
-  const {  session, status } = useSession();
+  const { data: session, status } = useSession();
   const [step, setStep] = useState(1);
   const [service, setService] = useState<string | null>(null);
   const [cart, setCart] = useState<{ id: string; name: string; qty: number }[]>([]);

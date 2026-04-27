@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export default function DashboardPage() {
-  const {  session, status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
