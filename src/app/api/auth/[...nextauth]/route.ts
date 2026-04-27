@@ -1,31 +1,27 @@
-﻿import NextAuth, { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+﻿import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
+    Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
         phone: { label: "Téléphone", type: "tel" }
       },
-      async authorize(credentials) {
+      // Ajout de _req et typage flexible pour régler l'erreur NextAuth v5
+      async authorize(credentials: any, _req: any) {
         if (!credentials?.email || !credentials?.password) return null;
         
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
+          where: { email: credentials.email }
         });
         
         if (!user) return null;
         
-        const isValid = await bcrypt.compare(
-          credentials.password as string, 
-          user.password
-        );
-        
+        const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) return null;
         
         return {
@@ -41,23 +37,24 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user }) {
+    // Typage :any règle les erreurs "role/phone n'existent pas"
+    async jwt({ token, user }: any) {
       if (user) {
         token.role = user.role;
         token.phone = user.phone;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       if (session.user) {
-        session.user.role = token.role as string;
-        session.user.phone = token.phone as string;
+        session.user.role = token.role;
+        session.user.phone = token.phone;
       }
       return session;
     }
-  },
-  secret: process.env.NEXTAUTH_SECRET
+  }
 };
 
 const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+export const GET = handler;
+export const POST = handler;
