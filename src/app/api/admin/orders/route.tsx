@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions as any);
-    if ((session as any)?.user?..role !== "admin") {
+    if ((session as any)?.user?.role !== "admin") {
       return NextResponse.json({ error: "AccÃ¨s rÃ©servÃ© aux administrateurs" }, { status: 403 });
     }
 
@@ -30,7 +30,7 @@ export async function GET() {
 export async function PATCH(req: Request) {
   try {
     const session = await getServerSession(authOptions as any);
-    if ((session as any)?.user?..role !== "admin") {
+    if ((session as any)?.user?.role !== "admin") {
       return NextResponse.json({ error: "AccÃ¨s rÃ©servÃ© aux administrateurs" }, { status: 403 });
     }
 
@@ -57,4 +57,5 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
+
 
