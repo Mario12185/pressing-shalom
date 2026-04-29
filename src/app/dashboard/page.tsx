@@ -14,20 +14,27 @@ export default async function DashboardPage() {
 
   try {
     const { prisma } = await import("@/lib/prisma");
+    
+    // ✅ AJOUT : include: { user: true } pour avoir accès au nom du client
     const [count, rev, pending, ready, orders] = await Promise.all([
       prisma.order.count(),
       prisma.order.aggregate({ _sum: { total: true } }),
       prisma.order.count({ where: { status: "EN_COURS" } }),
       prisma.order.count({ where: { status: "PRET" } }),
-      prisma.order.findMany({ take: 5, orderBy: { createdAt: "desc" } })
+      prisma.order.findMany({ 
+        take: 5, 
+        orderBy: { createdAt: "desc" },
+        include: { user: true } // ✅ Inclure l'utilisateur lié
+      })
     ]);
     stats = { total: count, revenue: rev._sum.total || 0, pending, ready };
     recentOrders = orders;
   } catch {
+    // Données de secours (fallback)
     stats = { total: 24, revenue: 145000, pending: 5, ready: 12 };
     recentOrders = [
-      { id: "CMD-0001", clientName: "Koffi Mensah", status: "EN_COURS", total: 5000, createdAt: new Date() },
-      { id: "CMD-0002", clientName: "Ama Dossou", status: "PRET", total: 12000, createdAt: new Date(Date.now() - 86400000) }
+      { id: "CMD-0001", clientName: "Koffi Mensah", status: "EN_COURS", total: 5000, createdAt: new Date(), user: { name: "Koffi Mensah" } },
+      { id: "CMD-0002", clientName: "Ama Dossou", status: "PRET", total: 12000, createdAt: new Date(Date.now() - 86400000), user: { name: "Ama Dossou" } }
     ];
   }
 
@@ -77,7 +84,6 @@ export default async function DashboardPage() {
           >
             📥 Exporter CSV
           </a>
-          {/* ✅ NOUVEAU BOUTON SUIVI CLIENT */}
           <Link 
             href="/track" 
             target="_blank"
@@ -110,7 +116,8 @@ export default async function DashboardPage() {
                 ) : (
                   recentOrders.map((order: any) => (
                     <tr key={order.id} className="hover:bg-gray-50/80 transition">
-                      <td className="px-6 py-4 font-medium text-gray-900">{order.clientName || "Client"}</td>
+                      {/* ✅ ACCÈS AU NOM : order.user?.name */}
+                      <td className="px-6 py-4 font-medium text-gray-900">{order.user?.name || "Client"}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(order.status)}`}>{order.status || "EN_COURS"}</span>
                       </td>
@@ -131,7 +138,6 @@ export default async function DashboardPage() {
   );
 }
 
-// ✅ StatCard reste un composant client séparé (si besoin d'interactivité)
 function StatCard({ title, value, icon, bg, text }: { title: string; value: string | number; icon: string; bg: string; text: string }) {
   return (
     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition group">
