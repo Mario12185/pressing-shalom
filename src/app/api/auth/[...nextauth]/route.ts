@@ -1,51 +1,38 @@
-﻿import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+﻿import NextAuth, { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// ⚠️ Suppression du typage explicite qui cause l'erreur GetServerSessionParams
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
-    Credentials({
+    CredentialsProvider({
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Mot de passe", type: "password" },
-        phone: { label: "Téléphone", type: "tel" }
+        password: { label: "Mot de passe", type: "password" }
       },
-      // @ts-expect-error NextAuth v5 strict type check`n
-      authorize: async (credentials: any, _req: any) => {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
-        if (!user) return null;
-        
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) return null;
-        
-        return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role };
+        try {
+          const user = await prisma.user.findUnique({ where: { email: credentials.email as string } });
+          if (!user || !user.password) return null;
+          
+          const isValid = await bcrypt.compare(credentials.password as string, user.password);
+          console.log("🔍 AUTH v4 -", { email: credentials.email, isValid });
+          
+          return isValid ? { id: user.id, name: user.name, email: user.email, role: user.role } : null;
+        } catch { return null; }
       }
     })
   ],
   pages: { signIn: "/login" },
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user }: any) {
-      if (user) { token.role = user.role; token.phone = user.phone; }
-      return token;
-    },
-    async session({ session, token }: any) {
-      if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).phone = token.phone;
-      }
-      return session;
-    }
+    jwt: ({ token, user }) => { if (user) { token.role = (user as any).role; } return token; },
+    session: ({ session, token }) => { if (session.user) { (session.user as any).role = token.role; } return session; }
   },
   secret: process.env.NEXTAUTH_SECRET
 };
 
-// Export compatible v4/v5 pour éviter l'erreur TypeScript au build
-// @ts-ignore
-const handler = NextAuth(authOptions as any);
-export const GET = handler;
-export const POST = handler;
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
