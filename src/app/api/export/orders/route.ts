@@ -1,50 +1,41 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  try {
-    const orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
-
-    const statusMap: Record<string, string> = {
-      EN_COURS: 'En cours',
-      PRET: 'Prêt',
-      LIVRE: 'Livré',
-      ANNULE: 'Annulé'
-    };
-
-    const headers = [
-      'ID Commande', 'Client', 'Téléphone', 'Service',
-      'Quantité', 'Prix Unitaire (FCFA)', 'Total (FCFA)',
-      'Statut', 'Mode', 'Date de création'
-    ];
-
-        const rows = orders.map(o => [
-      String(o.id),
-      `"${(o.clientName || '').replace(/"/g, '""')}"`,
-      String(o.clientPhone || ''),
-      String(o.serviceId || 'N/A'),
-      String(o.quantity),
-      String(Number(o.unitPrice || 0)),
-      String(Number(o.total || 0)),
-      String(statusMap[o.status as keyof typeof statusMap] || o.status),
-      String(o.deliveryType === 'pickup' ? 'Retrait' : 'Livraison'),
-      new Date(o.createdAt).toLocaleDateString('fr-FR')
-    ]);
-
-    // 🌍 BOM UTF-8 obligatoire pour qu'Excel affiche les accents
-    const bom = '\uFEFF';
-    const csvContent = bom + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-
-    return new NextResponse(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv;charset=utf-8',
-        'Content-Disposition': 'attachment; filename="commandes-pressing-shalom.csv"',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache'
-      }
-    });
-  } catch (error) {
-    console.error('❌ Erreur export CSV:', error);
-    return NextResponse.json({ error: 'Impossible de générer l\'export' }, { status: 500 });
+  const session = await getServerSession(authOptions);
+  if (!session || (session as any)?.user?.role !== "admin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+
+  // ✅ AJOUT : include: { user: true } pour récupérer nom & téléphone
+  const commandes = await prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { user: true }
+  });
+
+  // En-têtes CSV
+  const headers = ["ID Commande", "Client", "Téléphone", "Service", "Statut", "Total (FCFA)", "Date"];
+
+  // Lignes CSV
+  const lignes = commandes.map(o => [
+    `"${o.id}"`,
+    `"${(o.user?.name || "").replace(/"/g, '""')}"`, // ✅ Correction clientName
+    `"${(o.user?.phone || "").replace(/"/g, '""')}"`, // ✅ Correction clientPhone
+    `"${o.serviceType}"`,
+    `"${o.status}"`,
+    `"${o.total}"`,
+    `"${new Date(o.createdAt).toLocaleDateString("fr-FR")}"`
+  ]);
+
+  // Assemblage CSV avec saut de ligne Windows (\r\n) pour Excel
+  const csvContent = [headers, ...lignes].map(row => row.join(",")).join("\r\n");
+
+  return new NextResponse(csvContent, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": "attachment; filename=commandes-pressing-shalom.csv"
+    }
+  });
 }
