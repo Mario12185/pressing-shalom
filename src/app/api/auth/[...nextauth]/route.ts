@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -12,20 +12,13 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Mot de passe", type: "password" },
         phone: { label: "Téléphone", type: "text" }
       },
-      // ️ @ts-ignore nécessaire : NextAuth v4 a des types cassés ici
-      // @ts-ignore
       async authorize(credentials: any) {
         if (!credentials?.email && !credentials?.phone) {
           throw new Error("Email ou téléphone requis");
         }
 
         const user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: credentials.email },
-              { phone: credentials.phone }
-            ]
-          }
+          where: { OR: [{ email: credentials.email }, { phone: credentials.phone }] }
         });
 
         if (!user) throw new Error("Utilisateur non trouvé");
@@ -35,13 +28,7 @@ export const authOptions: NextAuthOptions = {
         const devPassword = credentials.password === "admin123" || credentials.password === "test123";
 
         if (isValid || (isDev && devPassword)) {
-          return {
-            id: user.id,
-            name: user.name || "Utilisateur",
-            email: user.email || "",
-            role: user.role || "user",
-            phone: user.phone
-          };
+          return { id: user.id, name: user.name || "Utilisateur", email: user.email || "", role: user.role || "user", phone: user.phone };
         }
         throw new Error("Mot de passe incorrect");
       }
@@ -49,27 +36,19 @@ export const authOptions: NextAuthOptions = {
   ],
 
   session: {
-    strategy: "jwt" as any, // Corrige l'erreur de type NextAuth
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60
   },
 
   pages: { signIn: "/login", error: "/login" },
 
   callbacks: {
-    // @ts-ignore
     async jwt({ token, user }: any) {
-      if (user) {
-        token.role = user.role;
-        token.phone = user.phone;
-      }
+      if (user) { token.role = user.role; token.phone = user.phone; }
       return token;
     },
-    // @ts-ignore
     async session({ session, token }: any) {
-      if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).phone = token.phone;
-      }
+      if (session.user) { (session.user as any).role = token.role; (session.user as any).phone = token.phone; }
       return session;
     }
   },
@@ -77,5 +56,7 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET
 };
 
+// ✅ @ts-ignore contourne le bug connu NextAuth v4 + TypeScript 5+
+// @ts-ignore
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
