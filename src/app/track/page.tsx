@@ -1,5 +1,6 @@
 // @ts-nocheck
 "use client";
+export const dynamic = "force-dynamic"; // ✅ Empêche la génération statique au build
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
