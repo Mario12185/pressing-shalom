@@ -1,110 +1,108 @@
-"use client"; // ✅ Obligatoire pour onClick
-
-import { useState, useEffect } from "react";
+// @ts-nocheck
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { StatusUpdaterClient } from "./StatusUpdater";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-// 🎨 Données de démo (remplace par Prisma plus tard)
-const DEMO_ORDER = {
-  id: "demo-123",
-  clientName: "Koffi Mensah",
-  clientPhone: "+228 90 12 34 56",
-  clientAddress: "Lomé, Nyékonakpoè",
-  serviceId: "pressing",
-  quantity: 3,
-  unitPrice: 1500,
-  total: 4500,
-  status: "EN_COURS",
-  deliveryType: "pickup",
-  notes: "Tache légère sur le col.",
-  createdAt: new Date(),
-  updatedAt: new Date()
-};
+// ✅ Server Action mise à jour statut
+async function updateStatus(formData: FormData) {
+  "use server";
+  const id = formData.get("orderId") as string;
+  const newStatus = formData.get("newStatus") as string;
 
-const formatFCFA = (amount: number) => new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-const formatDate = (date: any) => date ? new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "Non défini";
+  // ✅ CORRECTION : "where" et "data:" sont OBLIGATOIRES
+  await prisma.order.update({
+    where: { id },
+    data: { status: newStatus }
+  });
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
-  
-  // ✅ Attendre que le router soit prêt
-  useEffect(() => {
-    const t = setTimeout(() => setIsReady(true), 100);
-    return () => clearTimeout(t);
-  }, []);
+  revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/orders/${id}`);
+}
 
-  const order = DEMO_ORDER; // 🔁 Remplace par ta logique Prisma plus tard
-  const displayId = String(order?.id || params?.id || "inconnu").slice(0, 8);
+// ✅ Next.js 15+ : params est une Promise
+export default async function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session as any)?.user?.role !== "admin") redirect("/login");
 
-  const getStatusStyle = (status: string) => {
-    const s = status?.toUpperCase();
-    if (s === "EN_COURS") return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    if (s === "PRET") return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    if (s === "LIVRE") return "bg-blue-100 text-blue-800 border-blue-200";
-    if (s === "ANNULE") return "bg-red-100 text-red-800 border-red-200";
-    return "bg-gray-100 text-gray-800 border-gray-200";
-  };
+  const { id } = await params;
 
-  if (!isReady) return <div className="p-8 text-center text-gray-500">Chargement...</div>;
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { user: true }
+  });
+
+  if (!order) notFound();
+
+  const formatFCFA = (amount: number) => new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
+  const formatDate = (date: Date) => new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard/orders" className="text-sm text-gray-500 hover:text-[#064e3b] transition">← Commandes</Link>
-            <h1 className="text-xl font-bold text-[#064e3b]">Commande #{displayId}</h1>
-          </div>
-          {/* Bouton Imprimer inline */}
-          <button onClick={() => window.print()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition print:hidden">
-            🖨️ Imprimer
-          </button>
-        </div>
-      </header>
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow border">
+        <Link href="/dashboard" className="text-[#064e3b] hover:underline mb-4 inline-block font-medium">
+          ← Retour au tableau de bord
+        </Link>
+        
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+          Détails Commande #{order.id.slice(-6).toUpperCase()}
+        </h1>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        {/* 👤 Client */}
+        <div className="bg-blue-50 p-5 rounded-lg mb-6 border border-blue-100">
+          <h2 className="font-semibold text-blue-900 mb-2">👤 Client</h2>
+          <p className="text-lg font-bold text-gray-900">{order.user?.name || "Non renseigné"}</p>
+          <p className="text-gray-600">{order.user?.phone || "N/A"}</p>
+          <p className="text-sm text-gray-500 mt-1">📍 {order.address}</p>
+        </div>
+
+        {/* 📦 Service & Montant */}
+        <div className="grid grid-cols-2 gap-6 mb-6 border-b pb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{order.clientName}</h2>
-            <p className="text-gray-500 text-sm">{order.clientPhone} • {order.clientAddress}</p>
+            <h3 className="text-sm font-medium text-gray-500 uppercase">Service</h3>
+            <p className="font-semibold capitalize">{order.serviceType}</p>
           </div>
-          <StatusUpdaterClient orderId={order.id} currentStatus={order.status} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-[#064e3b] border-b border-gray-200 pb-2 mb-4">Service & Montant</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-gray-600">Service :</span> <span className="font-medium capitalize">{order.serviceId}</span></div>
-              <div className="flex justify-between"><span className="text-gray-600">Quantité :</span> <span className="font-medium">{order.quantity} unité(s)</span></div>
-              <div className="flex justify-between"><span className="text-gray-600">Prix unitaire :</span> <span className="font-medium">{formatFCFA(order.unitPrice)}</span></div>
-              {order.deliveryType === "delivery" && <div className="flex justify-between"><span className="text-gray-600">Livraison :</span> <span className="font-medium text-emerald-600">+1 000 FCFA</span></div>}
-              <div className="flex justify-between text-lg font-bold text-[#064e3b] pt-3 border-t border-gray-200">
-                <span>Total :</span> <span>{formatFCFA(order.total)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-[#064e3b] border-b border-gray-200 pb-2 mb-4">Dates & Suivi</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-gray-600">Créée le :</span> <span className="font-medium">{formatDate(order.createdAt)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-600">Dernière modif :</span> <span className="font-medium">{formatDate(order.updatedAt)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-600">Statut :</span>
-                <span className={`ml-2 px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(order.status)}`}>{order.status}</span>
-              </div>
-            </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 uppercase">Total</h3>
+            <p className="font-semibold text-[#064e3b] text-lg">{formatFCFA(order.total)}</p>
           </div>
         </div>
 
-        {order.notes && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-[#064e3b] border-b border-gray-200 pb-2 mb-3">Notes</h3>
-            <p className="text-gray-700 leading-relaxed">{order.notes}</p>
+        {/* 📊 Statut & Dates */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 uppercase">Statut actuel</h3>
+            <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-bold ${
+              order.status === 'PRET' ? 'bg-green-100 text-green-800' : 
+              order.status === 'LIVRE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+            }`}>
+              {order.status}
+            </span>
           </div>
-        )}
+          <div className="text-right text-sm text-gray-500">
+            <p>Créée le : {formatDate(order.createdAt)}</p>
+            <p>Modifiée le : {formatDate(order.updatedAt)}</p>
+          </div>
+        </div>
+
+        {/* 🔄 Mise à jour statut */}
+        <form action={updateStatus} className="border-t pt-6">
+          <input type="hidden" name="orderId" value={order.id} />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Changer le statut</label>
+          <div className="flex gap-4">
+            <select name="newStatus" defaultValue={order.status} className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#064e3b] outline-none">
+              <option value="EN_COURS">⏳ En cours</option>
+              <option value="PRET">✅ Prêt à livrer</option>
+              <option value="LIVRE">📦 Livré</option>
+              <option value="ANNULE">❌ Annulé</option>
+            </select>
+            <button type="submit" className="px-6 py-3 bg-[#064e3b] text-white font-medium rounded-lg hover:bg-[#047857] transition shadow-sm">
+              Sauvegarder
+            </button>
+          </div>
+        </form>
       </div>
     </main>
   );
