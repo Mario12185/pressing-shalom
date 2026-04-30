@@ -1,0 +1,11 @@
+# 🔐 Authentification
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=change_me_with_a_secure_random_string_12345
+
+# 🗄️ Base de données (SQLite en local)
+DATABASE_URL="file:./dev.db"
+
+# 📱 Twilio (optionnel - pour WhatsApp)
+# TWILIO_ACCOUNT_SID=
+# TWILIO_AUTH_TOKEN=
+# TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886

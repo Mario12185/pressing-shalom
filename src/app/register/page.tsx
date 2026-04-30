@@ -1,75 +1,107 @@
 ﻿"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Phone, Lock, Mail, User, ArrowLeft } from "lucide-react";
+import { useState, useActionState } from "react";
+import { registerAndOrder } from "./actions";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [pwd, setPwd] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  const formatPhone = (val: string) => {
-    const numbers = val.replace(/\D/g, "").slice(0, 8);
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 4) return `${numbers.slice(0,2)} ${numbers.slice(2)}`;
-    if (numbers.length <= 6) return `${numbers.slice(0,2)} ${numbers.slice(2,4)} ${numbers.slice(4)}`;
-    return `${numbers.slice(0,2)} ${numbers.slice(2,4)} ${numbers.slice(4,6)} ${numbers.slice(6)}`;
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    
-    if (pwd !== confirm) { setError("Les mots de passe ne correspondent pas"); setLoading(false); return; }
-    if (pwd.length < 6) { setError("Le mot de passe doit contenir au moins 6 caractères"); setLoading(false); return; }
-    
-    try {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, password: pwd })
-      });
-      const data = await res.json();
-      
-      if (!res.ok) { setError(data.error || "Erreur lors de l'inscription"); } 
-      else { router.push("/login?registered=true"); }
-    } catch (err) { setError("Erreur de connexion au serveur"); } 
-    finally { setLoading(false); }
-  };
+  const [quantity, setQuantity] = useState(1);
+  const [unitPrice, setUnitPrice] = useState(1500);
+  const total = quantity * unitPrice;
+  const [state, formAction, isPending] = useActionState(registerAndOrder, null);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        <div className="flex items-center gap-2 mb-6">
-          <Link href="/login" className="p-2 hover:bg-gray-100 rounded-lg transition"><ArrowLeft size={20} className="text-gray-600" /></Link>
-          <h1 className="text-2xl font-semibold text-gray-900">Créer un compte</h1>
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        {/* En-tête */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-[#064e3b]">🧼 Créer mon compte & Commander</h1>
+          <p className="text-gray-600 mt-2">Inscrivez-vous et passez votre première commande en 1 minute.</p>
         </div>
-        
-        {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-4">{error}</div>}
-        
-        <form className="space-y-4" onSubmit={handleRegister}>
-          <div className="relative"><User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Nom complet *" value={name} onChange={e => setName(e.target.value)} required className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition" /></div>
-          <div className="relative"><Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="email" placeholder="Adresse e-mail *" value={email} onChange={e => setEmail(e.target.value)} required className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition" /></div>
-          <div className="relative"><Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="tel" placeholder="Téléphone Togo (ex: 22 12 34 56)" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition" /></div>
-          <div className="relative"><Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="password" placeholder="Mot de passe * (min. 6 caractères)" value={pwd} onChange={e => setPwd(e.target.value)} required minLength={6} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition" /></div>
-          <div className="relative"><Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="password" placeholder="Confirmer le mot de passe *" value={confirm} onChange={e => setConfirm(e.target.value)} required className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition" /></div>
+
+        {/* Formulaire */}
+        <form action={formAction} className="bg-white p-6 md:p-8 rounded-2xl shadow-lg border space-y-6">
           
-          <button type="submit" disabled={loading} className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition shadow-lg shadow-teal-600/20 disabled:opacity-70">
-            {loading ? "Création du compte..." : "Créer mon compte"}
+          {/* 👤 Identité */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nom complet *</label>
+              <input name="name" required placeholder="Koffi Mensah" className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#064e3b] outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Téléphone (WhatsApp) *</label>
+              <input name="phone" type="tel" required placeholder="+228 90 00 00 00" className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#064e3b] outline-none" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Email *</label>
+              <input name="email" type="email" required placeholder="votre@email.com" className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#064e3b] outline-none" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Mot de passe *</label>
+              <input name="password" type="password" required minLength={6} placeholder="Minimum 6 caractères" className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#064e3b] outline-none" />
+            </div>
+          </div>
+
+          <hr className="border-gray-200" />
+
+          {/* 🧺 Commande */}
+          <h3 className="font-semibold text-gray-900">📦 Détails de la commande</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Service *</label>
+              <select name="serviceType" required className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 bg-white outline-none">
+                <option value="pressing">Pressing</option>
+                <option value="blanchisserie">Blanchisserie</option>
+                <option value="repassage">Repassage</option>
+                <option value="nettoyage-sec">Nettoyage à sec</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Quantité *</label>
+              <input type="number" name="quantity" min="1" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} required className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Prix unitaire (FCFA) *</label>
+              <input type="number" name="unitPrice" min="0" value={unitPrice} onChange={(e) => setUnitPrice(parseInt(e.target.value) || 0)} required className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 outline-none" />
+            </div>
+          </div>
+
+          {/* 💰 Total */}
+          <div className="bg-[#064e3b]/5 p-4 rounded-lg flex justify-between items-center">
+            <span className="font-medium text-[#064e3b]">💰 Total estimé :</span>
+            <span className="text-xl font-bold text-[#064e3b]">{total.toLocaleString("fr-FR")} FCFA</span>
+          </div>
+          <input type="hidden" name="total" value={total} />
+
+          {/* 📍 Livraison */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Date de livraison *</label>
+              <input type="date" name="deliveryDate" required className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Heure de livraison *</label>
+              <input type="time" name="deliveryTime" required className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Adresse de livraison</label>
+              <input name="address" placeholder="Quartier, repère..." className="mt-1 w-full px-4 py-3 rounded-lg border border-gray-300 outline-none" />
+            </div>
+          </div>
+
+          {/* ✅ Bouton */}
+          {state?.error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">️ {state.error}</div>
+          )}
+          
+          <button type="submit" disabled={isPending} className="w-full py-4 bg-[#064e3b] text-white font-bold text-lg rounded-xl hover:bg-[#047857] transition disabled:opacity-50 shadow-lg">
+            {isPending ? "⏳ Création en cours..." : "✅ Créer mon compte & Commander"}
           </button>
+
+          <p className="text-center text-sm text-gray-500">
+            Déjà un compte ? <Link href="/login" className="text-[#064e3b] font-medium hover:underline">Se connecter</Link>
+          </p>
         </form>
-        
-        <p className="text-center text-sm text-gray-600 mt-6">Déjà un compte ? <Link href="/login" className="text-teal-600 hover:underline font-medium">Se connecter</Link></p>
-        <p className="text-center text-xs text-gray-500 mt-4">🇹🇬 Votre numéro servira aux notifications WhatsApp & livraison</p>
       </div>
-    </div>
+    </main>
   );
 }
