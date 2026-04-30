@@ -1,9 +1,10 @@
-﻿import NextAuth, { NextAuthOptions } from "next-auth";
+﻿import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-const authOptions: NextAuthOptions = {
+// ✅ EXPORT obligatoire pour que les autres fichiers puissent l'importer
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -35,11 +36,7 @@ const authOptions: NextAuthOptions = {
     })
   ],
 
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60
-  },
-
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/login", error: "/login" },
 
   callbacks: {
@@ -56,7 +53,6 @@ const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET
 };
 
-// ✅ @ts-ignore contourne le bug connu NextAuth v4 + TypeScript 5+
-// @ts-ignore
+// @ts-ignore - Contourne le bug de typage NextAuth v4 + TS5
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
